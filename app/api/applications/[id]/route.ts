@@ -33,7 +33,7 @@ export async function PATCH(
     .from("applications")
     .update(updates)
     .eq("id", params.id)
-    .select("*")
+    .select("*, contacts(name, email, company_name)")
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

@@ -15,5 +15,12 @@ export function getSupabaseServer() {
 
   return createClient(url, key, {
     auth: { persistSession: false },
+    global: {
+      // Explicitly bypass Next.js's Data Cache for every Supabase request.
+      // `force-dynamic` on pages sets fetchCache:'no-store' at the route level,
+      // but that propagation is unreliable for third-party clients that may hold
+      // a captured fetch reference. This override guarantees freshness regardless.
+      fetch: (input, init = {}) => fetch(input, { ...init, cache: "no-store" }),
+    },
   });
 }

@@ -12,6 +12,8 @@ const STATUS_COLOR: Record<string, string> = {
   closed: "#1C1B19",
 };
 
+const STATUS_ORDER = ["new", "drafted", "sent", "opened", "replied", "follow_up_sent", "closed"];
+
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
@@ -22,10 +24,14 @@ export default async function DashboardPage() {
     .order("created_at", { ascending: false });
 
   const apps = applications ?? [];
-  const counts = apps.reduce<Record<string, number>>((acc, a) => {
+  const rawCounts = apps.reduce<Record<string, number>>((acc, a) => {
     acc[a.status] = (acc[a.status] ?? 0) + 1;
     return acc;
   }, {});
+  // Sort by pipeline order so the summary bar reads left-to-right by stage.
+  const counts = STATUS_ORDER
+    .filter((s) => s in rawCounts)
+    .map((s) => [s, rawCounts[s]] as [string, number]);
 
   return (
     <div>
@@ -48,13 +54,13 @@ export default async function DashboardPage() {
       </div>
 
       <div className="flex gap-6 mb-8 font-mono text-xs uppercase tracking-wide text-muted">
-        {Object.entries(counts).map(([status, n]) => (
+        {counts.map(([status, n]) => (
           <span key={status} className="flex items-center gap-2">
             <span
               className="status-dot"
               style={{ backgroundColor: STATUS_COLOR[status] ?? "#A8A6A0" }}
             />
-            {status.replace("_", " ")} · {n}
+            {status.replaceAll("_", " ")} · {n}
           </span>
         ))}
       </div>
@@ -87,7 +93,7 @@ export default async function DashboardPage() {
                 </div>
               </div>
               <span className="font-mono text-xs uppercase tracking-wide text-muted">
-                {app.status.replace("_", " ")}
+                {app.status.replaceAll("_", " ")}
               </span>
             </Link>
           ))}

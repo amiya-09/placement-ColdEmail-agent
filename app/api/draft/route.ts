@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
         updated_at: new Date().toISOString(),
       })
       .eq("id", applicationId)
-      .select("*")
+      .select("*, contacts(name, email, company_name)")
       .single();
 
     if (updateErr) throw new Error(updateErr.message);

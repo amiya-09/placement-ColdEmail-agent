@@ -102,7 +102,7 @@ export default function ApplicationDetail({ initial }: { initial: Application })
   return (
     <div className="max-w-2xl">
       <p className="font-mono text-xs uppercase tracking-widest text-muted mb-1">
-        {app.status.replace("_", " ")}
+        {app.status.replaceAll("_", " ")}
       </p>
       <h1 className="font-display text-3xl mb-1">{app.company_name}</h1>
       <p className="text-sm text-muted mb-8">

@@ -101,8 +101,12 @@ export default function ApplicationDetail({ initial }: { initial: Application })
 
   return (
     <div className="max-w-2xl">
-      <p className="font-mono text-xs uppercase tracking-widest text-muted mb-1">
+      <p
+        className="font-mono text-xs uppercase tracking-widest text-muted mb-1"
+        title={app.status === "opened" ? "Gmail can prefetch images on delivery, so this isn't a reliable signal that the email was actually read" : undefined}
+      >
         {app.status.replaceAll("_", " ")}
+        {app.status === "opened" && <span className="normal-case tracking-normal ml-1 opacity-60">(unreliable)</span>}
       </p>
       <h1 className="font-display text-3xl mb-1">{app.company_name}</h1>
       <p className="text-sm text-muted mb-8">

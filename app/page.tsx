@@ -58,9 +58,17 @@ export default async function DashboardPage() {
           <span key={status} className="flex items-center gap-2">
             <span
               className="status-dot"
-              style={{ backgroundColor: STATUS_COLOR[status] ?? "#A8A6A0" }}
+              style={
+                status === "opened"
+                  ? { backgroundColor: "transparent", border: "1.5px solid #6B6A63", boxSizing: "border-box" }
+                  : { backgroundColor: STATUS_COLOR[status] ?? "#A8A6A0" }
+              }
             />
-            {status.replaceAll("_", " ")} · {n}
+            <span title={status === "opened" ? "Gmail can prefetch images on delivery, so this isn't a reliable signal that the email was actually read" : undefined}>
+              {status.replaceAll("_", " ")}
+              {status === "opened" && <span className="normal-case tracking-normal ml-1 opacity-60">(unreliable)</span>}
+            </span>
+            {" · "}{n}
           </span>
         ))}
       </div>
@@ -83,7 +91,11 @@ export default async function DashboardPage() {
               <div className="flex items-center gap-3">
                 <span
                   className="status-dot"
-                  style={{ backgroundColor: STATUS_COLOR[app.status] ?? "#A8A6A0" }}
+                  style={
+                    app.status === "opened"
+                      ? { backgroundColor: "transparent", border: "1.5px solid #6B6A63", boxSizing: "border-box" }
+                      : { backgroundColor: STATUS_COLOR[app.status] ?? "#A8A6A0" }
+                  }
                 />
                 <div>
                   <p className="font-medium">{app.company_name}</p>
@@ -92,8 +104,12 @@ export default async function DashboardPage() {
                   </p>
                 </div>
               </div>
-              <span className="font-mono text-xs uppercase tracking-wide text-muted">
+              <span
+                className="font-mono text-xs uppercase tracking-wide text-muted"
+                title={app.status === "opened" ? "Gmail can prefetch images on delivery, so this isn't a reliable signal that the email was actually read" : undefined}
+              >
                 {app.status.replaceAll("_", " ")}
+                {app.status === "opened" && <span className="normal-case tracking-normal ml-1 opacity-60">(unreliable)</span>}
               </span>
             </Link>
           ))}

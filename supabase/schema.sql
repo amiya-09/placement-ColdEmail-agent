@@ -58,3 +58,40 @@ create table email_events (
 
 create index on email_events (application_id);
 create index on applications (status);
+
+-- Phase 2: discovery tables
+-- Run only the block below if Phase 1 tables already exist in your project.
+
+create table target_companies (
+  id uuid primary key default gen_random_uuid(),
+  company_name text not null unique,
+  source text not null default 'manual', -- manual | excel_import | ats_discovered
+  priority boolean not null default false,
+  last_contacted_at timestamptz,
+  created_at timestamptz default now()
+);
+
+create index on target_companies (company_name);
+
+-- Phase 2: postings discovered by the pipeline
+-- Run only this block if Phase 1 + Phase 2a tables already exist.
+
+create table postings (
+  id uuid primary key default gen_random_uuid(),
+  external_id text not null,
+  source text not null, -- 'adzuna' for now, more sources later
+  company_name text not null,
+  title text not null,
+  jd_text text,
+  location text,
+  apply_url text,
+  posted_date date,
+  status text not null default 'new', -- new | hard_rejected | scored | promoted | dismissed
+  reject_reason text,
+  stage1_score numeric,
+  discovered_at timestamptz default now(),
+  unique(source, external_id)
+);
+
+create index on postings (status, stage1_score desc);
+create index on postings (source, external_id);

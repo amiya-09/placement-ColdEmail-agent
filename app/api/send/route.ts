@@ -75,6 +75,16 @@ export async function POST(req: NextRequest) {
       event_type: "sent",
     });
 
+    // Track last contact time on the company watch-list (insert if not already there).
+    await supabase.from("target_companies").upsert(
+      {
+        company_name: application.company_name,
+        last_contacted_at: new Date().toISOString(),
+        source: "manual",
+      },
+      { onConflict: "company_name" }
+    );
+
     const { data: updated, error: updateErr } = await supabase
       .from("applications")
       .update({

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 interface Profile {
@@ -34,11 +34,44 @@ function SetupContent() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Company watch-list state
+  const [companyCount, setCompanyCount] = useState<number | null>(null);
+  const [companyFile, setCompanyFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadResult, setUploadResult] = useState<{ imported: number; total: number } | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     fetch("/api/profile")
       .then((r) => r.json())
       .then((d) => setProfiles(d.profiles ?? []));
+    fetch("/api/companies")
+      .then((r) => r.json())
+      .then((d) => setCompanyCount(d.count ?? 0));
   }, []);
+
+  async function handleUpload() {
+    if (!companyFile) return;
+    setUploading(true);
+    setUploadError(null);
+    setUploadResult(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", companyFile);
+      const res = await fetch("/api/companies", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setUploadResult(data);
+      setCompanyCount(data.total);
+      setCompanyFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } catch (err: any) {
+      setUploadError(err.message);
+    } finally {
+      setUploading(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -175,6 +208,59 @@ function SetupContent() {
             {saving ? "Saving…" : "Save resume version"}
           </button>
         </form>
+      </section>
+
+      <section>
+        <h2 className="font-display text-2xl mb-6">Company watch-list</h2>
+
+        <p className="text-sm text-muted mb-6">
+          {companyCount === null
+            ? "Loading…"
+            : companyCount === 0
+            ? "No companies in the watch-list yet."
+            : `${companyCount} ${companyCount === 1 ? "company" : "companies"} in the watch-list.`}
+        </p>
+
+        <div className="space-y-4">
+          <label className="block">
+            <span className="block text-sm font-medium mb-1.5">
+              Upload spreadsheet (.xlsx)
+            </span>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={(e) => {
+                setCompanyFile(e.target.files?.[0] ?? null);
+                setUploadResult(null);
+                setUploadError(null);
+              }}
+              className="block text-sm text-muted"
+            />
+          </label>
+
+          {uploadError && <p className="text-sm text-clay">{uploadError}</p>}
+          {uploadResult && (
+            <p className="text-sm text-moss">
+              Imported {uploadResult.imported}{" "}
+              {uploadResult.imported === 1 ? "company" : "companies"} ·{" "}
+              {uploadResult.total} total in watch-list
+            </p>
+          )}
+
+          <button
+            onClick={handleUpload}
+            disabled={!companyFile || uploading}
+            className="bg-ink text-paper px-5 py-2.5 rounded-sm text-sm font-medium hover:bg-moss disabled:opacity-50 transition-colors"
+          >
+            {uploading ? "Importing…" : "Import companies"}
+          </button>
+
+          <p className="text-xs text-muted">
+            Reads the column named "Company" from the first sheet and upserts
+            into the watch-list. Duplicates and blank rows are skipped.
+          </p>
+        </div>
       </section>
     </div>
   );

@@ -1,10 +1,20 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function NewApplicationPage() {
+  return (
+    <Suspense fallback={null}>
+      <NewApplicationContent />
+    </Suspense>
+  );
+}
+
+function NewApplicationContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [form, setForm] = useState({
     companyName: "",
     jdText: "",
@@ -14,9 +24,61 @@ export default function NewApplicationPage() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resolving, setResolving] = useState(false);
+  const [resolveSource, setResolveSource] = useState<string | null>(null);
+
+  // Pre-fill from ?company= and ?jd= when arriving from the Discover page.
+  useEffect(() => {
+    const company = searchParams.get("company");
+    const jd = searchParams.get("jd");
+    if (company || jd) {
+      setForm((f) => ({
+        ...f,
+        ...(company ? { companyName: company } : {}),
+        ...(jd ? { jdText: jd } : {}),
+      }));
+    }
+  }, [searchParams]);
 
   function update(field: string, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
+  }
+
+  const RESOLVE_LABELS: Record<string, string> = {
+    contacts_table: "Found in saved contacts",
+    apollo: "Found via Apollo",
+    hunter: "Found via Hunter.io",
+    generic_guess: "Generic guess — verify before sending",
+    not_found: "Not found — enter manually",
+  };
+
+  async function handleResolve() {
+    if (!form.companyName) return;
+    setResolving(true);
+    setResolveSource(null);
+    try {
+      const res = await fetch("/api/contacts/resolve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ companyName: form.companyName }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Resolve failed");
+      if (data.found) {
+        setForm((f) => ({
+          ...f,
+          contactEmail: data.email,
+          ...(data.name ? { contactName: data.name } : {}),
+        }));
+        setResolveSource(data.source);
+      } else {
+        setResolveSource("not_found");
+      }
+    } catch {
+      setResolveSource("not_found");
+    } finally {
+      setResolving(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -76,16 +138,33 @@ export default function NewApplicationPage() {
               placeholder="Leave blank if unknown"
             />
           </Field>
-          <Field label="Recruiter email">
-            <input
-              required
-              type="email"
-              value={form.contactEmail}
-              onChange={(e) => update("contactEmail", e.target.value)}
-              className="w-full border border-line rounded-sm px-3 py-2 bg-white"
-              placeholder="name@company.com"
-            />
-          </Field>
+          <div>
+            <span className="block text-sm font-medium mb-1.5">Recruiter email</span>
+            <div className="flex gap-2">
+              <input
+                required
+                type="email"
+                value={form.contactEmail}
+                onChange={(e) => update("contactEmail", e.target.value)}
+                className="flex-1 min-w-0 border border-line rounded-sm px-3 py-2 bg-white"
+                placeholder="name@company.com"
+              />
+              <button
+                type="button"
+                onClick={handleResolve}
+                disabled={resolving || !form.companyName}
+                title={form.companyName ? "Auto-find a recruiter email" : "Enter a company name first"}
+                className="border border-line px-3 py-2 rounded-sm text-xs font-medium hover:bg-white disabled:opacity-40 transition-colors whitespace-nowrap"
+              >
+                {resolving ? "Finding…" : "Find contact"}
+              </button>
+            </div>
+            {resolveSource && (
+              <p className={`text-xs mt-1.5 ${resolveSource === "not_found" || resolveSource === "generic_guess" ? "text-clay" : "text-muted"}`}>
+                {RESOLVE_LABELS[resolveSource] ?? resolveSource}
+              </p>
+            )}
+          </div>
         </div>
 
         <Field label="Resume version (optional)">

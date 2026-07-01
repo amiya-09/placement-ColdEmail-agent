@@ -27,6 +27,9 @@ export default function RootLayout({
               <Link href="/new" className="hover:text-ink transition-colors">
                 New
               </Link>
+              <Link href="/discover" className="hover:text-ink transition-colors">
+                Discover
+              </Link>
               <Link href="/setup" className="hover:text-ink transition-colors">
                 Setup
               </Link>
